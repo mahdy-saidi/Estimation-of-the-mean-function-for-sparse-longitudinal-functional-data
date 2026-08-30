@@ -145,7 +145,7 @@ WRITE_CSV <- FALSE   # TRUE: also write the res_*.csv files with the raw numbers
 
 ## ---- Run size, output folder, master seed ------------------------------
 SETTINGS <- Sys.getenv("SIM_SETTINGS", unset = "FULL")  # "QUICK" | "FULL"
-OUTDIR <- Sys.getenv("SIM_OUTDIR", unset = "./Téléchargements/Thesis/")
+OUTDIR <- Sys.getenv("SIM_OUTDIR", unset = "./outputs/")
 BASESEED <- 2026L
 
 # create the output folder if needed
@@ -1248,7 +1248,7 @@ exp_design <- function() {
                       paste(fmt_exp_se(sl["exponent", ], sl["se", ]), collapse = " & "), " \\\\"),
                "\\bottomrule", "\\end{tabular}",
                sprintf(paste0("\\caption{Design term $\\mathcal{R}^{\\mathrm{design}}=",
-                              "\\sum_{k\\le%d}\\int_{\\mathcal{U}}\\mathrm{Var}(M_k(u))\\,\\mathrm{d}u$, ",
+                              "\\sum_{k\\le%d}\\int_{\\mathcal{U}}\\mathrm{Var}(\\Lambda_k(u))\\,\\mathrm{d}u$, ",
                               "isolated from signal-only data, versus $M$ ($R=%d$ per design ",
                               "point). Bottom row: fitted exponent in $M$, regression s.e.}"),
                        K, R),
@@ -1475,6 +1475,11 @@ exp_rate <- function() {
   sl["se", ]  <- apply(boot_sl, 2, sd)        # overwrite with bootstrap s.e.
   ksl["se", ] <- apply(boot_k,  2, sd)
   hsl["se"]   <- sd(boot_ht)
+  ## the caption should not assert h_u* = 0 unless it holds in this run
+  hu_note <- if (all(Kres$hu_ll == 0))
+    "The selected $\\widehat h_u^*$ is $0$ at every $n$ and is omitted. " else
+      sprintf("The selected $\\widehat h_u^*$ is not always $0$ here (%s). ",
+              paste(format(Kres$hu_ll, digits = 3), collapse = ", "))
   
   ## ---- tab_rate: risks with s.e., exponent row at the bottom --------------
   ## All risks are reported in units of 10^{-3} (a single factor for the whole
@@ -1524,10 +1529,9 @@ exp_rate <- function() {
                       " & ", fmt_exp_se(hsl["exponent"], hsl["se"]), " \\\\"),
                "\\bottomrule", "\\end{tabular}",
                sprintf(paste0("\\caption{Empirical oracle truncation and $t$-bandwidth versus $M$ ",
-                              "(same runs as Table~\\ref{tab:rate}, $R=%d$). The selected ",
-                              "$\\widehat h_u^*$ is $0$ at every $n$ and is omitted. Bottom row: ",
+                              "(same runs as Table~\\ref{tab:rate}, $R=%d$). %sBottom row: ",
                               "fitted exponent in $M$, bootstrap s.e.}"),
-                       cfg$R_rate),
+                       cfg$R_rate, hu_note),
                "\\label{tab:Kstar}", "\\end{table}"),
              file.path(OUTDIR, "tab_Kstar.tex"))
   cat("  wrote tab_Kstar.tex\n")
